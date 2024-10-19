@@ -1,9 +1,9 @@
 variable "aws_region" {
-  default = "us-east-1"
+  default = "us-west-1"
 }
 
 variable "aws_availability_zone" {
-  default = "us-east-1a"
+  default = "us-west-1a"
 }
 
 variable "ami_id" {
@@ -26,3 +26,7 @@ variable "db_password" {
   description = "Database password"
   sensitive   = true
 }
+
+variable "aws_access_key" {}
+
+variable "aws_secret_key" {}
