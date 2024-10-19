@@ -3,8 +3,11 @@ yum update -y
 yum install -y python3
 pip3 install flask psycopg2-binary boto3
 
-# Fetch decrypted database password from KMS
-db_password=$(aws kms decrypt --ciphertext-blob fileb:///path/to/encrypted/db_password --output text --query Plaintext | base64 --decode)
+# The encrypted database password
+encrypted_password_base64="${encrypted_password}"
+
+# Decrypt the database password using KMS
+db_password=$(echo $encrypted_password_base64 | base64 --decode | aws kms decrypt --ciphertext-blob fileb:///dev/stdin --output text --query Plaintext | base64 --decode)
 
 # Write the Flask app
 cat <<EOF > /home/ec2-user/app.py

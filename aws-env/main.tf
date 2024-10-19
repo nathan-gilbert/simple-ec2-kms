@@ -43,6 +43,20 @@ resource "aws_security_group" "allow_all" {
   }
 }
 
+resource "random_password" "db_password" {
+  length  = 16
+  special = true
+}
+
+resource "aws_kms_key" "db_credentials" {
+  description = "KMS key for encrypting DB credentials"
+}
+
+resource "aws_kms_ciphertext" "db_password_encrypted" {
+  key_id    = aws_kms_key.db_credentials.id
+  plaintext = random_password.db_password.result
+}
+
 resource "aws_instance" "flask_instance" {
   ami                         = var.ami_id
   instance_type              = "t2.micro"
@@ -50,7 +64,9 @@ resource "aws_instance" "flask_instance" {
   security_groups            = [aws_security_group.allow_all.name]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.ec2_instance_key_pair.id
-  user_data                  = file("user_data.sh")
+  user_data                  = templatefile("${path.module}/user_data.tpl", {
+    encrypted_password = aws_kms_ciphertext.db_password_encrypted.ciphertext_blob
+  })
 
   tags = {
     Name = "FlaskAppInstance"
@@ -64,7 +80,7 @@ resource "aws_db_instance" "postgres" {
   instance_class          = "db.t2.micro"
   identifier              = var.db_name
   username                = var.db_user
-  password                = var.db_password
+  password                = random_password.db_password.result
   parameter_group_name    = "default.postgres16"
   publicly_accessible     = true
   skip_final_snapshot     = true
@@ -75,13 +91,4 @@ resource "aws_db_instance" "postgres" {
 resource "aws_db_subnet_group" "main" {
   name       = "main"
   subnet_ids = [aws_subnet.public.id]
-}
-
-resource "aws_kms_key" "db_credentials" {
-  description = "KMS key for encrypting DB credentials"
-}
-
-resource "aws_kms_ciphertext" "db_password_encrypted" {
-  key_id = aws_kms_key.db_credentials.id
-  plaintext = var.db_password
 }

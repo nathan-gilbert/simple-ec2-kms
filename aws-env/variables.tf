@@ -8,6 +8,7 @@ variable "aws_availability_zone" {
 
 variable "ami_id" {
   description = "AMI ID for the EC2 instance"
+  default = "ami-0da424eb883458071"
 }
 
 variable "instance_name" {
@@ -21,11 +22,6 @@ variable "db_name" {
 
 variable "db_user" {
   default = "admin"
-}
-
-variable "db_password" {
-  description = "Database password"
-  sensitive   = true
 }
 
 variable "aws_access_key" {}
