@@ -10,8 +10,9 @@ variable "ami_id" {
   description = "AMI ID for the EC2 instance"
 }
 
-variable "key_pair_name" {
-  description = "EC2 key pair name"
+variable "instance_name" {
+  description = "EC2 instance name"
+  default = "FlaskAppInstance"
 }
 
 variable "db_name" {

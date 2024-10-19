@@ -1,3 +1,20 @@
+# SSH Key Configuration
+resource "tls_private_key" "ec2_instance_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Generate a Private Key and encode it as PEM.
+resource "aws_key_pair" "ec2_instance_key_pair" {
+  key_name   = "${replace(lower(var.instance_name), " ", "-")}_key"
+  public_key = tls_private_key.ec2_instance_key.public_key_openssh
+
+  provisioner "local-exec" {
+    command     = "echo '${tls_private_key.ec2_instance_key.private_key_pem}' > ./${var.instance_name}_key.pem"
+    interpreter = ["pwsh", "-Command"]
+  }
+}
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
@@ -32,7 +49,7 @@ resource "aws_instance" "flask_instance" {
   subnet_id                  = aws_subnet.public.id
   security_groups            = [aws_security_group.allow_all.name]
   associate_public_ip_address = true
-  key_name                   = var.key_pair_name
+  key_name                    = aws_key_pair.ec2_instance_key_pair.id
   user_data                  = file("user_data.sh")
 
   tags = {
@@ -43,12 +60,12 @@ resource "aws_instance" "flask_instance" {
 resource "aws_db_instance" "postgres" {
   allocated_storage       = 20
   engine                  = "postgres"
-  engine_version          = "12.7"
+  engine_version          = "16.4"
   instance_class          = "db.t2.micro"
   identifier              = var.db_name
   username                = var.db_user
   password                = var.db_password
-  parameter_group_name    = "default.postgres12"
+  parameter_group_name    = "default.postgres16"
   publicly_accessible     = true
   skip_final_snapshot     = true
   vpc_security_group_ids  = [aws_security_group.allow_all.id]
