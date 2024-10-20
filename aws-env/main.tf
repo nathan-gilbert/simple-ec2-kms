@@ -221,7 +221,7 @@ resource "aws_instance" "flask_instance" {
     encrypted_password = aws_kms_ciphertext.db_password_encrypted.ciphertext_blob
     db_name            = var.db_name
     db_user            = var.db_user
-    db_endpoint        = aws_db_instance.postgres.endpoint
+    db_endpoint        = split(":", aws_db_instance.postgres.endpoint)[0]
   })
 
   tags = {
