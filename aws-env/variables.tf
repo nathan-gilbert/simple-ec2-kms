@@ -21,7 +21,7 @@ variable "db_name" {
 }
 
 variable "db_user" {
-  default = "admin"
+  default = "app_user"
 }
 
 variable "aws_access_key" {}
