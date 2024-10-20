@@ -24,6 +24,12 @@ variable "db_user" {
   default = "app_user"
 }
 
+variable "kms_user" {
+  description = "The IAM user who needs access to the KMS key"
+  type        = string
+  default     = "nathan"
+}
+
 variable "aws_access_key" {}
 
 variable "aws_secret_key" {}

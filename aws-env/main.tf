@@ -75,7 +75,111 @@ resource "random_password" "db_password" {
 }
 
 resource "aws_kms_key" "db_credentials" {
-  description = "KMS key for encrypting DB credentials"
+  description         = "KMS key for encrypting DB credentials"
+  key_usage           = "ENCRYPT_DECRYPT"
+  is_enabled          = true
+  enable_key_rotation = true
+
+  policy = <<EOF
+  {
+    "Version": "2012-10-17",
+    "Id": "key-policy-1",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        },
+        "Action": "kms:*",
+        "Resource": "*"
+      },
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${aws_iam_role.ec2_role.name}"
+        },
+        "Action": [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${var.kms_user}"
+        },
+        "Action": [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey",
+          "kms:CreateGrant",
+          "kms:RevokeGrant"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }
+  EOF
+}
+
+resource "aws_iam_role" "ec2_role" {
+  name = "ec2-db-creds-role"
+
+  assume_role_policy = <<EOF
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "ec2.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }
+  EOF
+}
+
+resource "aws_iam_policy" "ec2_policy" {
+  name        = "ec2-policy"
+  description = "Policy for EC2 instance to access KMS and S3"
+  policy = <<EOF
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "s3:ListBucket",
+          "s3:GetObject"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }
+  EOF
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_policy_attachment" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = aws_iam_policy.ec2_policy.arn
+}
+
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "ec2-instance-profile"
+  role = aws_iam_role.ec2_role.name
+}
+
+resource "aws_kms_alias" "db_creds_alias" {
+  name          = "alias/db-key"
+  target_key_id = aws_kms_key.db_credentials.id
 }
 
 resource "aws_kms_ciphertext" "db_password_encrypted" {
@@ -107,6 +211,7 @@ resource "aws_db_instance" "postgres" {
 
 resource "aws_instance" "flask_instance" {
   ami                         = var.ami_id
+  iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile.name
   instance_type               = "t2.micro"
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.allow_all.id]
