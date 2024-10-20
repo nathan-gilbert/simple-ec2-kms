@@ -21,7 +21,7 @@ def hello():
     conn = psycopg2.connect(
         dbname="${db_name}",
         user="${db_user}",
-        password="${db_password}",
+        password="$db_password",
         host="${db_endpoint}",
         port="5432"
     )

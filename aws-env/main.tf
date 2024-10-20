@@ -66,6 +66,9 @@ resource "aws_instance" "flask_instance" {
   key_name                    = aws_key_pair.ec2_instance_key_pair.id
   user_data                  = templatefile("${path.module}/user_data.tpl", {
     encrypted_password = aws_kms_ciphertext.db_password_encrypted.ciphertext_blob
+    db_name            = var.db_name
+    db_user            = var.db_user
+    db_endpoint        = aws_db_instance.postgres.endpoint
   })
 
   tags = {
